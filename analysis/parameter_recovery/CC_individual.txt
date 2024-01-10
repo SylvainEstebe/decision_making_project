@@ -1,0 +1,46 @@
+model {
+
+  #-------------------------------------------------------------------
+  #-------------------  Individual level model -----------------------
+  #-------------------------------------------------------------------
+
+  for (g in 1:ngroups) {
+  
+    for (s in 1:groupSize) {
+
+      #--------------- Model priors ------------------------------------------------------
+
+      alpha[s,g] ~ dgamma(0.1,0.1)
+      rho[s,g] ~ dbeta(1,1)T(0.001,0.999) 
+      omega[s,g] ~ dbeta(1,1)T(0.001,0.999)
+
+      # --- Trial 1
+      #beliefs about others on first trial - gamma-poisson distribution
+      Gb[s,1,g] ~ dpois(alpha[s,g])
+
+      # modelled preference and first contribution - see below
+      p[s,1,g] <- (rho[s,g]*Gb[s,1,g])
+      c[s,1,g] ~ dpois(p[s,1,g])
+        
+    }
+
+    #--------------- Implementation of CC model --------------------------------
+
+    for (t in 2:ntrials) {
+
+      for (s in 1:groupSize) {
+        
+        #- Belief about group contribution
+        Gb[s,t,g] <- ((1-omega[s,g])*(Gb[s,t-1,g]))+(omega[s,g]*(Ga[s,t-1,g]))
+
+        #- Contribution preference, given belief and matching preference rho  
+        p[s,t,g] <- rho[s,g]*Gb[s,t,g]
+
+        #- Contribution as discrete sample from preferences
+        c[s,t,g] ~ dpois(p[s,t,g])
+      }
+        
+    }
+  }
+  
+}
